@@ -1,62 +1,30 @@
-const jsonServer = require('json-server');
-const server = jsonServer.create();
-const middlewares = jsonServer.defaults();
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
 
-// Enable CORS and body parsing
-server.use(middlewares);
-server.use(jsonServer.bodyParser);
-
-// In-memory database
-let db = {
-  users: [
-    {
-      id: "1",
-      name: "yasser",
-      message: "hello iam yasser salem"
-    },
-    {
-      id: "2",
-      name: "merna",
-      message: "hello iam merna alaa"
-    }
-  ]
-};
-
-// Custom routes
-server.get('/users', (req, res) => {
-  res.jsonp(db.users);
+// Define User schema
+const userSchema = new mongoose.Schema({
+  name: String,
+  message: String,
+  createdAt: { type: Date, default: Date.now },
 });
 
-server.post('/users', (req, res) => {
-  const newUser = {
-    id: Date.now().toString(),
-    ...req.body,
-    createdAt: new Date().toISOString()
-  };
-  db.users.push(newUser);
+const User = mongoose.model('User', userSchema);
+
+// Get all users
+router.get('/users', async (req, res) => {
+  const users = await User.find();
+  res.json(users);
+});
+
+// Add a new user
+router.post('/users', async (req, res) => {
+  const newUser = new User({
+    name: req.body.name,
+    message: req.body.message,
+  });
+  await newUser.save();
   res.status(201).json(newUser);
 });
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = 3000;
-  server.listen(PORT, () => {
-    console.log(`JSON Server is running on port ${PORT}`);
-  });
-}
-
-// For Vercel deployment
-module.exports = (req, res) => {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  // Pass to server
-  return server(req, res);
-};
+module.exports = router;
